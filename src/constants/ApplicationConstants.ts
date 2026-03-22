@@ -1,0 +1,1 @@
+export const COOKIE_USER_INFO = "ac_user_info";
