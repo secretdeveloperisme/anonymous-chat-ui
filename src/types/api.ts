@@ -41,6 +41,7 @@ export interface GroupResult {
   group_code: string;
   group_id: number;
   group_name: string;
+  approval_required: boolean;
   is_waiting: boolean;
   user_code: string;
   user_id: number;

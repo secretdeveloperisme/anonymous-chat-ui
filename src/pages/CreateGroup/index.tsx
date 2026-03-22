@@ -1,21 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Select } from '../../components/Select';
 import { Checkbox } from '../../components/Checkbox';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/Card';
-import { setCurrentUser, setCurrentGroup } from '../../services/chatSlice';
 import { createGroup } from '~/services/groupService';
-import type { RootState } from '~/services/store';
-import cookie from '~/utils/cookie';
-import * as ApplicationConstants from '~/constants/ApplicationConstants';
+import useCurrentUser from '~/hooks/useCurrentUser';
+import { useCurrentGroup } from '~/hooks/useCurrentGroup';
 
 
 export default function CreateGroup() {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
 
   const [formData, setFormData] = useState({
     username: '',
@@ -26,36 +22,41 @@ export default function CreateGroup() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  let currentUser = useSelector((state: RootState) => state.chat.currentUser);
+  const { user, setUser } = useCurrentUser();
+  const { setGroup } = useCurrentGroup();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user != null) {
+      setFormData(prev => ({ ...prev, username: user.username }));
+    }
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const finalValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
     setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
+
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    if (currentUser == null) {
-      const userInfoCookie = cookie.getCookie(ApplicationConstants.COOKIE_USER_INFO);
-      if (userInfoCookie) {
-        let userInfo = JSON.parse(userInfoCookie);
-        dispatch(setCurrentUser(userInfo));
-        currentUser = userInfo;
-      }
-    }
+    setErrorMessage(null);
+    let userCode: string | undefined = undefined;
 
     try {
+      if (user != null && user.username == formData.username) {
+        userCode = user.code;
+      }
       const groupResult = await createGroup({
         username: formData.username,
         group_name: formData.groupName,
         duration: Number(formData.duration),
         maximum_members: Number(formData.maxPeople),
         approval_require: formData.approvalRequired,
-      }, currentUser?.code);
+      }, userCode);
 
-      dispatch(setCurrentGroup({
+      setGroup({
         id: groupResult.group_id,
         code: groupResult.group_code,
         name: formData.groupName,
@@ -63,21 +64,17 @@ export default function CreateGroup() {
         maxPeople: Number(formData.maxPeople),
         approvalRequired: formData.approvalRequired,
         ownerId: groupResult.user_id
-      }));
+      });
 
-      dispatch(setCurrentUser({
+      setUser({
         id: groupResult.user_id,
         code: groupResult.user_code,
         username: groupResult.username
-      }));
-      cookie.setCookie(ApplicationConstants.COOKIE_USER_INFO, JSON.stringify({
-        id: groupResult.user_id,
-        code: groupResult.user_code,
-        username: groupResult.username
-      }), { expires: 7 });
+      });
       navigate(`/chat/${groupResult.group_id}`);
     } catch (error) {
       console.error("Failed to create group:", error);
+      setErrorMessage('Error creating group');
     } finally {
       setIsLoading(false);
     }
@@ -150,6 +147,9 @@ export default function CreateGroup() {
                 checked={formData.approvalRequired}
                 onChange={handleChange}
               />
+            </div>
+            <div className='text-red-500 text-sm' hidden={errorMessage == null || errorMessage == ''}>
+              {errorMessage}
             </div>
 
             <Button type="submit" className="w-full" isLoading={isLoading}>

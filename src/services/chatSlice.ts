@@ -15,10 +15,10 @@ const chatSlice = createSlice({
   name: 'chat',
   initialState,
   reducers: {
-    setCurrentUser: (state, action: PayloadAction<User>) => {
+    setCurrentUser: (state, action: PayloadAction<User | null>) => {
       state.currentUser = action.payload;
     },
-    setCurrentGroup: (state, action: PayloadAction<Group>) => {
+    setCurrentGroup: (state, action: PayloadAction<Group | null>) => {
       state.currentGroup = action.payload;
     },
     resetState: () => initialState,
