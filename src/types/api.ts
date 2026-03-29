@@ -1,10 +1,9 @@
-export type MessageStatus = "NotSent" | "Sent" | "Seen";
-export type MessageTypeEnum = "TEXT" | "ATTACHMENT";
-export type AttachmentTypeEnum = "TEXT" | "IMAGE" | "VIDEO" | "AUDIO" | "BINARY" | "COMPRESSION";
+import type { MessageStatus, MessageType, AttachmentType } from "~/constants/Types";
+
 export type OrderBy = "ASC" | "DESC";
 
 export interface AttachmentPayload {
-  attachment_type: AttachmentTypeEnum;
+  attachment_type: AttachmentType;
   id?: number;
   url: string;
 }
@@ -37,6 +36,7 @@ export interface NewGroupForm {
 }
 
 export interface GroupResult {
+  created_at: string;
   expired_at: string;
   group_code: string;
   group_id: number;
@@ -113,7 +113,7 @@ export interface MessageWithUser {
   content?: string | null;
   created_at: string;
   id: number;
-  message_type: MessageTypeEnum;
+  message_type: MessageType;
   message_uuid: string;
   status: MessageStatus;
   updated_at?: string | null;
@@ -150,7 +150,7 @@ export interface SendMessageRequest {
   attachments?: AttachmentPayload[] | null;
   content?: string | null;
   group_id: number;
-  message_type: MessageTypeEnum;
+  message_type: MessageType;
   message_uuid: string;
 }
 
@@ -159,14 +159,14 @@ export interface SendMessageResponse {
   content: string;
   created_at: string;
   message_id: number;
-  message_type: MessageTypeEnum;
+  message_type: MessageType;
   message_uuid: string;
   status: MessageStatus;
 }
 
 export interface UpdateMessage {
   content?: string | null;
-  message_type?: MessageTypeEnum | null;
+  message_type?: MessageType | null;
 }
 
 export interface MessageResponse {
@@ -174,7 +174,7 @@ export interface MessageResponse {
   content?: string | null;
   created_at: string;
   id: number;
-  message_type: MessageTypeEnum;
+  message_type: MessageType;
   status: MessageStatus;
   updated_at?: string | null;
   user_id: number;

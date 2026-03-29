@@ -1,5 +1,5 @@
-export type MessageType = "text" | "image" | "video" | "file";
-export type MessageStatus = "NotSent" | "Sent" | "Seen";
+import type { MessageStatus, MessageType, AttachmentType } from "~/constants/Types";
+
 export interface User {
     id: number;
     username: string;
@@ -14,15 +14,24 @@ export interface Group {
     maxPeople: number;
     approvalRequired: boolean;
     ownerId: number;
+    expiredAt: string;
+}
+
+export interface AttachmentPayload {
+    attachmentType: AttachmentType;
+    id?: number;
+    url: string;
 }
 
 export interface Message {
-    id: string;
-    content: string;
-    message_type: MessageType;
-    userId: number;
-    groupId: number;
+    attachments?: AttachmentPayload[] | null;
+    content?: string | null;
+    id: number;
+    messageType: MessageType;
+    messageUuid: string;
     status: MessageStatus;
-    createAt: string,
-    updatedAt: string
+    createdAt: string;
+    updatedAt?: string | null;
+    userId: number;
+    userName: string;
 }

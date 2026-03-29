@@ -63,7 +63,8 @@ export default function CreateGroup() {
         duration: formData.duration,
         maxPeople: Number(formData.maxPeople),
         approvalRequired: formData.approvalRequired,
-        ownerId: groupResult.user_id
+        ownerId: groupResult.user_id,
+        expiredAt: groupResult.expired_at,
       });
 
       setUser({

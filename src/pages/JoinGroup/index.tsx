@@ -68,6 +68,7 @@ export default function JoinGroup() {
         approvalRequired: joinGroupResponse.approval_required,
         duration: 0,
         maxPeople: 0,
+        expiredAt: joinGroupResponse.expired_at,
       });
       if (joinGroupResponse.is_waiting) {
         navigate(`/waiting/${joinGroupResponse.group_id}`);
