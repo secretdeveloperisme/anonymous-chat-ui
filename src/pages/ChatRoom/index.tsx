@@ -3,16 +3,18 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/Card';
 import useCurrentUser from '~/hooks/useCurrentUser';
 import { useCurrentGroup } from '~/hooks/useCurrentGroup';
-import useGetMessages from '~/hooks/useGetMessages';
 import { maskGroupCode } from '~/utils/ui_utils';
 import { FloatingComponent } from '~/components/FloatingComponent';
 import { Button } from '~/components/Button';
 import TimerCountDown from './TimerCountDown';
+import MessageItem from './MessageItem';
 import { notify } from '~/components/Toast';
 import { ToastContainer } from 'react-toastify';
 import { REDIRECT_DELAY } from '~/constants/ApplicationConstants';
 import { leaveGroup } from '~/services/groupService';
+import { sendMessage, updateMessage, deleteMessage } from '~/services/messageService';
 import useGetGroup from '~/hooks/useGetGroup';
+import useGetMessages from '~/hooks/useGetMessages';
 
 export default function ChatRoom() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -22,6 +24,7 @@ export default function ChatRoom() {
   const { group: currentGroup, removeGroup } = useCurrentGroup();
 
   const [inputText, setInputText] = useState('');
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,11 +45,46 @@ export default function ChatRoom() {
     }
   }, [groupError]);
 
-  const handleSend = (e: React.SubmitEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !currentUser) return;
+    if (!inputText.trim() || !currentUser || !currentGroup) return;
 
+    const content = inputText.trim();
     setInputText('');
+
+    try {
+      if (editingMessageId) {
+        await updateMessage(editingMessageId, { content }, currentUser.code);
+        setEditingMessageId(null);
+        refresh();
+      } else {
+        await sendMessage({
+          content,
+          group_id: currentGroup.id,
+          message_type: "TEXT",
+          message_uuid: crypto.randomUUID()
+        }, currentUser.code);
+        refresh();
+      }
+    } catch {
+      notify.error(editingMessageId ? "Failed to update message" : "Failed to send message");
+    }
+  };
+
+  const handleEdit = (messageId: number, content: string) => {
+    setEditingMessageId(messageId);
+    setInputText(content);
+  };
+
+  const handleDelete = async (messageId: number) => {
+    if (!currentUser) return;
+    try {
+      await deleteMessage(messageId, currentUser.code);
+      refresh();
+      notify.success("Message deleted");
+    } catch {
+      notify.error("Failed to delete message");
+    }
   };
 
   const handleCopyGroupCode = () => {
@@ -66,12 +104,12 @@ export default function ChatRoom() {
       setTimeout(() => {
         navigate('/');
       }, REDIRECT_DELAY);
-    } catch (error) {
+    } catch {
       notify.error("Failed to leave group");
     }
   }
 
-  const { messages, isLoading, error } = useGetMessages(currentGroup, currentUser);
+  const { messages, isLoading, error, refresh } = useGetMessages(currentGroup, currentUser);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -138,22 +176,13 @@ export default function ChatRoom() {
             messages.map((msg) => {
               const isMe = msg.userId === currentUser?.id;
               return (
-                <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs font-medium ${isMe ? 'text-primary-300' : 'text-text-muted'}`}>
-                      {msg.userId}
-                    </span>
-                    <span className="text-[10px] text-text-muted/50">
-                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  <div className={`px-4 py-2.5 rounded-2xl max-w-[85%] text-sm shadow-sm ${isMe
-                    ? 'bg-primary-600 text-white rounded-br-sm'
-                    : 'bg-surface-hover text-text-main border border-border/50 rounded-bl-sm'
-                    }`}>
-                    {msg.content}
-                  </div>
-                </div>
+                <MessageItem
+                  key={msg.id}
+                  message={msg}
+                  isMe={isMe}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
               );
             })
           )}
@@ -165,10 +194,24 @@ export default function ChatRoom() {
             <input
               type="text"
               className="grow bg-surface/50 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all placeholder:text-text-muted/60"
-              placeholder="Type your message..."
+              placeholder={editingMessageId ? "Edit your message..." : "Type your message..."}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
             />
+            {editingMessageId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingMessageId(null);
+                  setInputText('');
+                }}
+                className="shrink-0 bg-surface-hover hover:bg-surface border border-border text-text-main w-12 h-12 rounded-xl flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-background"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
             <button
               type="submit"
               disabled={!inputText.trim()}
